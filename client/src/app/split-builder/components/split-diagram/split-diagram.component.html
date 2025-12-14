@@ -1,0 +1,113 @@
+<div class="diagram-container">
+  <!-- Toolbar and FAB above diagram -->
+  <div class="diagram-header-bar">
+    <div class="diagram-toolbar">
+      <ion-button size="small" (click)="zoomToFit()">
+        <ion-icon name="expand" slot="start"></ion-icon>
+        Fit
+      </ion-button>
+      <ion-button size="small" (click)="resetZoom()">
+        <ion-icon name="resize" slot="start"></ion-icon>
+        Reset
+      </ion-button>
+    </div>
+    <!-- FAB button for adding recipients - only shown when SplitXCH node is selected -->
+    <ion-fab 
+      *ngIf="selectedNode && isSplitXCHNode(selectedNode)" 
+      vertical="top" 
+      horizontal="end" 
+      slot="fixed"
+      class="diagram-fab"
+    >
+      <ion-fab-button (click)="addRecipient.emit(selectedNode)">
+        <ion-icon name="add"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
+  </div>
+  <div class="diagram-content-wrapper">
+    <div #diagramDiv class="diagram-wrapper"></div>
+    
+    <!-- Sidebar panel with node details -->
+    <div class="diagram-sidebar" *ngIf="selectedNode">
+      <div class="sidebar-header">
+        <h3 class="sidebar-title">{{ selectedNode.name }}</h3>
+        <div class="sidebar-basis-points">{{ formatBasisPoints(selectedNode.basisPoints) }}</div>
+      </div>
+
+      <!-- Recipients Section -->
+      <div class="sidebar-section" *ngIf="selectedNode.recipients && selectedNode.recipients.length > 0">
+        <h4 class="sidebar-section-title">Recipients</h4>
+        <div class="sidebar-recipient-list">
+          <div class="sidebar-recipient-item" *ngFor="let recipient of selectedNode.recipients">
+            <div class="sidebar-recipient-info">
+              <div class="sidebar-recipient-name">
+                {{ recipient.name }}
+                <span class="sidebar-recipient-type">({{ getAddressTypeDisplay(recipient) }})</span>
+              </div>
+              <div class="sidebar-recipient-address" [class.placeholder]="isPlaceholderAddress(recipient.address)">
+                {{ recipient.address }}
+              </div>
+            </div>
+            <div class="sidebar-recipient-actions">
+              <span class="sidebar-recipient-percentage">{{ formatBasisPoints(recipient.basisPoints) }}</span>
+              <button class="sidebar-icon-button" (click)="onEditRecipient(selectedNode, recipient)" title="Edit">
+                <ion-icon name="create-outline"></ion-icon>
+              </button>
+              <button class="sidebar-icon-button" (click)="onRemoveRecipient(selectedNode, recipient.id)" title="Remove">
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nested Splits Section -->
+      <div class="sidebar-section" *ngIf="selectedNode.children && selectedNode.children.length > 0 && isSplitXCHNode(selectedNode)">
+        <h4 class="sidebar-section-title">Nested Splits</h4>
+        <div class="sidebar-recipient-list">
+          <div class="sidebar-recipient-item" *ngFor="let child of selectedNode.children">
+            <div class="sidebar-recipient-info">
+              <div class="sidebar-recipient-name">{{ child.name }}</div>
+              <div class="sidebar-recipient-address">Split Branch</div>
+            </div>
+            <div class="sidebar-recipient-actions">
+              <span class="sidebar-recipient-percentage">{{ formatBasisPoints(child.basisPoints) }}</span>
+              <button class="sidebar-icon-button" (click)="onSelectNode(child)" title="Select">
+                <ion-icon name="arrow-forward-outline"></ion-icon>
+              </button>
+              <button class="sidebar-icon-button" (click)="onRemoveNestedSplit(selectedNode, child.id)" title="Remove">
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="sidebar-empty" *ngIf="(!selectedNode.recipients || selectedNode.recipients.length === 0) && (!selectedNode.children || selectedNode.children.length === 0)">
+        <p>No recipients or nested splits</p>
+        <p class="sidebar-empty-hint">Use the + button to add recipients</p>
+      </div>
+    </div>
+  </div>
+
+  <div #deleteBox class="delete-box" [class.drag-over]="isDraggingOverDelete">
+    <ion-icon name="trash-outline"></ion-icon>
+    <span>Drop Here To Delete</span>
+  </div>
+  <div class="diagram-legend">
+    <div class="legend-item">
+      <div class="legend-box split-box"></div>
+      <span>Split Node</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box recipient-box"></div>
+      <span>Recipient</span>
+    </div>
+    <div class="legend-hint">
+      <ion-icon name="information-circle"></ion-icon>
+      <span>Click node name to edit • Right-click for menu • Drag to delete area to remove</span>
+    </div>
+  </div>
+</div>
+

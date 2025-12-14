@@ -1,0 +1,53 @@
+.split-node {
+  margin-bottom: 16px;
+}
+
+ion-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &.selected {
+    border: 2px solid var(--ion-color-primary);
+    box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.3);
+  }
+}
+
+.recipients-list {
+  margin-top: 12px;
+}
+
+.recipient-item {
+  --padding-start: 0;
+  margin-bottom: 8px;
+  border: 1px solid var(--ion-color-light);
+  border-radius: 8px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.nested-splits {
+  margin-top: 16px;
+  border-left: 2px solid var(--ion-color-light);
+  padding-left: 16px;
+}
+
+.nested-controls {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--ion-color-light-tint);
+  border-radius: 8px;
+  
+  ion-button {
+    margin: 4px;
+  }
+}
+

@@ -1,0 +1,92 @@
+<div [style]="getIndentStyle()" class="split-node">
+  <!-- Split Node Card -->
+  <ion-card [class.selected]="isSelected()" (click)="selectNode()">
+    <ion-card-header>
+      <ion-card-title>
+        {{ node.name }}
+        <ion-badge color="primary">{{ formatBasisPoints(node.basisPoints) }}</ion-badge>
+      </ion-card-title>
+      <ion-card-subtitle *ngIf="getTotalBasisPoints() !== BasisPointsUtils.MAX_BASIS_POINTS">
+        Total: {{ formatBasisPoints(getTotalBasisPoints()) }} (should be 100%)
+      </ion-card-subtitle>
+    </ion-card-header>
+
+    <ion-card-content>
+      <!-- Recipients List -->
+      <div *ngIf="node.recipients && node.recipients.length > 0" class="recipients-list">
+        <ion-label>
+          <h3>Recipients:</h3>
+        </ion-label>
+        <ion-item *ngFor="let recipient of node.recipients" class="recipient-item">
+          <ion-label>
+            <h3>{{ recipient.name }}</h3>
+            <p>{{ recipient.address }}</p>
+          </ion-label>
+          <ion-badge slot="end" color="secondary">{{ formatBasisPoints(recipient.basisPoints) }}</ion-badge>
+          <ion-button fill="clear" size="small" (click)="onEditRecipient(recipient); $event.stopPropagation()">
+            <ion-icon name="create" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" size="small" color="danger" (click)="onRemoveRecipient(recipient.id); $event.stopPropagation()">
+            <ion-icon name="trash" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions" *ngIf="isSelected()">
+        <ion-button size="small" (click)="onAddRecipient(); $event.stopPropagation()">
+          <ion-icon name="person-add" slot="start"></ion-icon>
+          Add Recipient
+        </ion-button>
+        <ion-button size="small" (click)="onAddNestedSplit(); $event.stopPropagation()">
+          <ion-icon name="folder-add" slot="start"></ion-icon>
+          Add Split
+        </ion-button>
+        <ion-button 
+          *ngIf="node.children && node.children.length > 0"
+          size="small"
+          fill="outline"
+          color="danger"
+          (click)="selectNode(); $event.stopPropagation()"
+        >
+          <ion-icon name="folder" slot="start"></ion-icon>
+          Manage Nested Splits
+        </ion-button>
+      </div>
+      
+      <!-- Nested Split Removal Controls -->
+      <div *ngIf="isSelected() && node.children && node.children.length > 0" class="nested-controls">
+        <ion-label><h4>Remove Nested Splits:</h4></ion-label>
+        <ion-button 
+          *ngFor="let child of node.children"
+          size="small"
+          fill="outline"
+          color="danger"
+          (click)="onRemoveNestedSplit(child.id); $event.stopPropagation()"
+        >
+          <ion-icon name="close-circle" slot="start"></ion-icon>
+          Remove {{ child.name }}
+        </ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Nested Splits (Recursive) -->
+  <div *ngIf="node.children && node.children.length > 0" class="nested-splits">
+    <app-split-node
+      *ngFor="let child of node.children"
+      [node]="child"
+      [selectedNode]="selectedNode"
+      [depth]="depth + 1"
+      (nodeSelected)="nodeSelected.emit($event)"
+      (addRecipient)="addRecipient.emit($event)"
+      (addNestedSplit)="addNestedSplit.emit($event)"
+      (removeRecipient)="removeRecipient.emit($event)"
+      (removeNestedSplit)="removeNestedSplit.emit($event)"
+      (editRecipient)="editRecipient.emit($event)"
+    ></app-split-node>
+    
+    <!-- Remove buttons for nested splits are handled by each child component -->
+  </div>
+</div>
+

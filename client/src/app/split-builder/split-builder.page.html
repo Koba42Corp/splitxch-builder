@@ -1,0 +1,222 @@
+<ion-content [fullscreen]="true" class="split-builder-container">
+<div class="split-builder-wrapper">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <h1 class="page-title">Royalty Split Builder</h1>
+      <div class="header-actions">
+        <button class="icon-button" (click)="createNewTree()" title="New Split">
+          <ion-icon name="add-outline"></ion-icon>
+        </button>
+        <button class="icon-button" (click)="exportToJSON()" title="Export">
+          <ion-icon name="download-outline"></ion-icon>
+        </button>
+        <button class="icon-button" (click)="exportToSplitXCH()" title="Export SplitXCH">
+          <ion-icon name="code-outline"></ion-icon>
+        </button>
+        <button class="icon-button" (click)="finalizeBlueprint()" title="Finalize Blueprint" *ngIf="!isFinalized() && hasPlaceholders()">
+          <ion-icon name="checkmark-done-outline"></ion-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Status Banner -->
+    <div class="status-banner" [class.success]="validation.valid" [class.error]="validation && !validation.valid && validation.errors.length > 0" *ngIf="validation">
+      <div class="status-content">
+        <ion-icon [name]="validation.valid ? 'checkmark-circle' : 'alert-circle'" class="status-icon"></ion-icon>
+        <div class="status-text">
+          <div *ngIf="validation.valid">✓ Split configuration is valid and ready</div>
+          <div *ngIf="!validation.valid && validation.errors.length > 0">
+            {{ validation.errors[0] }}
+          </div>
+          <div *ngIf="validation.warnings.length > 0" style="margin-top: 8px; font-size: 14px; opacity: 0.9;">
+            {{ validation.warnings[0] }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagram Section -->
+    <div class="diagram-section" *ngIf="tree">
+      <div class="diagram-header">
+        <h2 class="section-title">Split Structure</h2>
+      </div>
+      <div class="diagram-container">
+        <app-split-diagram
+          [tree]="tree"
+          [selectedNode]="selectedNode"
+          (nodeSelected)="selectNode($event)"
+          (nodeDoubleClicked)="selectNode($event)"
+          (addRecipient)="openAddRecipientModal($event)"
+          (addNestedSplit)="openAddNestedSplitModal($event)"
+          (nodeDeleted)="handleNodeDeleted($event)"
+          (nodeRenamed)="handleNodeRenamed($event)"
+          (removeRecipient)="removeRecipient($event.node, $event.recipientId)"
+          (removeNestedSplit)="removeNestedSplit($event)"
+          (editRecipient)="editRecipient($event.node, $event.recipient)"
+        ></app-split-diagram>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!tree">
+      <ion-icon name="git-network-outline" class="empty-state-icon"></ion-icon>
+      <p class="empty-state-text">No split tree created yet</p>
+      <button class="primary-button" (click)="createNewTree()" style="margin-top: 24px; max-width: 200px; margin-left: auto; margin-right: auto;">
+        <ion-icon name="add-outline"></ion-icon>
+        Create Split Tree
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Add Recipient Modal -->
+<ion-modal [isOpen]="showAddRecipientModal" (willDismiss)="showAddRecipientModal = false" [showBackdrop]="true" [backdropDismiss]="true">
+  <ng-template>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Add Recipient</h2>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Recipient Type</label>
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
+          <button 
+            class="modal-button" 
+            [class.primary]="newRecipient.isFixedWallet"
+            [class.secondary]="!newRecipient.isFixedWallet"
+            (click)="newRecipient.isFixedWallet = true"
+            style="flex: 1;"
+          >
+            <ion-icon name="wallet-outline" style="margin-right: 8px;"></ion-icon>
+            Fixed Wallet
+          </button>
+          <button 
+            class="modal-button"
+            [class.primary]="!newRecipient.isFixedWallet"
+            [class.secondary]="newRecipient.isFixedWallet"
+            (click)="newRecipient.isFixedWallet = false"
+            style="flex: 1;"
+          >
+            <ion-icon name="git-branch-outline" style="margin-right: 8px;"></ion-icon>
+            New Split
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Recipient Name</label>
+        <input type="text" class="form-input" [(ngModel)]="newRecipient.name" placeholder="Enter recipient name">
+      </div>
+
+      <div class="form-group" *ngIf="newRecipient.isFixedWallet">
+        <label class="form-label">XCH Wallet Address</label>
+        <input type="text" class="form-input" [(ngModel)]="newRecipient.address" placeholder="xch1...">
+        <div class="form-note">Enter the recipient's Chia wallet address</div>
+      </div>
+
+      <div class="form-group" *ngIf="!newRecipient.isFixedWallet">
+        <div class="form-note" style="background: #f0f4ff; padding: 12px; border-radius: 8px; color: #667eea;">
+          <ion-icon name="information-circle" style="vertical-align: middle;"></ion-icon>
+          This will create a new SplitXCH split branch. A placeholder address will be assigned until you finalize the blueprint.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Percentage</label>
+        <input type="number" class="form-input" [(ngModel)]="newRecipient.percentage" min="0" max="100" step="0.01" placeholder="0.00">
+        <div class="form-note">Must sum to 100% with other recipients/splits in this node</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-button secondary" (click)="showAddRecipientModal = false">Cancel</button>
+        <button class="modal-button primary" (click)="addRecipient()">
+          {{ newRecipient.isFixedWallet ? 'Add Wallet' : 'Create Split Branch' }}
+        </button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+<!-- Add Nested Split Modal -->
+<ion-modal [isOpen]="showAddNestedSplitModal" (willDismiss)="showAddNestedSplitModal = false" [showBackdrop]="true" [backdropDismiss]="true">
+  <ng-template>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Create New Split Branch</h2>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Split Name</label>
+        <input type="text" class="form-input" [(ngModel)]="newNestedSplit.name" placeholder="Enter split name">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Percentage</label>
+        <input type="number" class="form-input" [(ngModel)]="newNestedSplit.percentage" min="0" max="100" step="0.01" placeholder="0.00">
+        <div class="form-note">Must sum to 100% with other recipients/splits in this node</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-button secondary" (click)="showAddNestedSplitModal = false">Cancel</button>
+        <button class="modal-button primary" (click)="addNestedSplit()">Create Branch</button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+<!-- Edit Recipient Modal -->
+<ion-modal [isOpen]="showEditRecipientModal" (willDismiss)="showEditRecipientModal = false" [showBackdrop]="true" [backdropDismiss]="true">
+  <ng-template>
+    <div class="modal-content" *ngIf="editingRecipient">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Recipient</h2>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Recipient Name</label>
+        <input type="text" class="form-input" [(ngModel)]="editingRecipient.name" placeholder="Enter recipient name">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">XCH Address</label>
+        <input type="text" class="form-input" [(ngModel)]="editingRecipient.address" placeholder="xch1...">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Percentage</label>
+        <input type="number" class="form-input" [(ngModel)]="editingRecipientPercentage" min="0" max="100" step="0.01" placeholder="0.00">
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-button secondary" (click)="showEditRecipientModal = false">Cancel</button>
+        <button class="modal-button primary" (click)="saveRecipientEdit()">Save Changes</button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+<!-- Export Modal -->
+<ion-modal [isOpen]="showExportModal" (willDismiss)="showExportModal = false" [showBackdrop]="true" [backdropDismiss]="true">
+  <ng-template>
+    <div class="modal-content" *ngIf="exportMapping">
+      <div class="modal-header">
+        <h2 class="modal-title">SplitXCH Export</h2>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">SplitXCH Mapping</label>
+        <pre style="background: #f5f5f7; padding: 16px; border-radius: 12px; font-size: 12px; overflow-x: auto; font-family: 'SF Mono', Monaco, 'Courier New', monospace;">{{ exportMapping | json }}</pre>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-button secondary" (click)="showExportModal = false">Close</button>
+        <button class="modal-button primary" (click)="copyToClipboard()">Copy to Clipboard</button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
