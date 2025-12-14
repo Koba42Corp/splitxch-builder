@@ -50,6 +50,22 @@
   display: block;
 }
 
+.beta-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #ff9500 0%, #ff6b00 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
+  vertical-align: middle;
+  line-height: 1;
+}
+
 .header-actions {
   display: flex;
   gap: 12px;

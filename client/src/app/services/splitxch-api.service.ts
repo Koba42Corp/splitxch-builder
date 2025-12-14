@@ -57,15 +57,33 @@ export class SplitXCHApiService {
     // The API adds a 150 bps fee (1.5%), so recipient points should be 9850/10000 = 0.985 of total
     // Scale recipient points proportionally so recipient_points + 150 fee = 10,000
     const apiFeeBasisPoints = 150; // API fee from documentation example
-    const scaleFactor = (10000 - apiFeeBasisPoints) / 10000; // 0.985
+    const targetTotal = 10000 - apiFeeBasisPoints; // 9850
     
-    // Convert basisPoints to points, scaling down to account for API fee
+    // Scale all points proportionally, then adjust the last recipient to ensure exact total
+    const scaledRecipients = recipients.map((r, index) => ({
+      name: r.name || `Recipient ${index + 1}`,
+      address: r.address,
+      points: Math.round((r.basisPoints * targetTotal) / totalRecipientPoints), // Scale proportionally
+      originalBasisPoints: r.basisPoints,
+      id: index + 1,
+    }));
+    
+    // Calculate actual total and adjust the last recipient to ensure exact sum
+    const actualTotal = scaledRecipients.reduce((sum, r) => sum + r.points, 0);
+    const difference = targetTotal - actualTotal;
+    
+    // Adjust the last recipient to make the total exactly 9850
+    if (difference !== 0 && scaledRecipients.length > 0) {
+      scaledRecipients[scaledRecipients.length - 1].points += difference;
+    }
+    
+    // Convert to request format
     const request: CreateSplitRequest = {
-      recipients: recipients.map((r, index) => ({
-        name: r.name || `Recipient ${index + 1}`,
+      recipients: scaledRecipients.map(r => ({
+        name: r.name,
         address: r.address,
-        points: Math.round(r.basisPoints * scaleFactor), // Scale down to account for API fee
-        id: index + 1,
+        points: r.points,
+        id: r.id,
       })),
     };
 
