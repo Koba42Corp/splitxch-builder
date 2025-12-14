@@ -115,11 +115,11 @@ export class SplitDiagramComponent implements OnInit, OnChanges, AfterViewInit, 
       initialAutoScale: go.Diagram.Uniform,
       contentAlignment: go.Spot.Center,
       layout: $(go.TreeLayout, {
-        angle: 90, // Vertical layout (top to bottom)
-        layerSpacing: 160, // Spacing between layers
-        nodeSpacing: 50, // Spacing between siblings
+        angle: 0, // Horizontal layout (left to right)
+        layerSpacing: 200, // Spacing between layers (horizontal distance)
+        nodeSpacing: 80, // Spacing between siblings (vertical distance)
         alignment: go.TreeAlignment.CenterChildren,
-        arrangement: go.TreeArrangement.Vertical,
+        arrangement: go.TreeArrangement.Horizontal,
         sorting: go.TreeSorting.Forwards,
         compaction: go.TreeCompaction.None,
       }),

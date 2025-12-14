@@ -20,9 +20,9 @@ log.txt
 # Ionic
 /.ionic
 /www
-/docs
 /platforms
 /plugins
+# Note: /docs is NOT ignored so GitHub Pages can serve from it
 
 # Compiled output
 /dist

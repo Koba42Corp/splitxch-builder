@@ -62,13 +62,13 @@
   flex: 1;
   display: flex;
   position: relative;
-  min-height: 500px;
+  min-height: 400px;
   overflow: hidden; // Clip content, FAB is now in header
 }
 
 .diagram-wrapper {
   flex: 1;
-  min-height: 500px;
+  min-height: 400px;
   background: #fafbfc;
   position: relative;
   overflow: hidden; // Canvas should be clipped, FAB is now in header
