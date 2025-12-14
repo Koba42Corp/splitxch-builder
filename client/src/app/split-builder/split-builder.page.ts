@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { SplitTreeService } from '../services/split-tree.service';
+import { SplitXCHApiService } from '../services/splitxch-api.service';
 import {
   SplitTree,
   SplitNode,
@@ -26,6 +27,7 @@ export class SplitBuilderPage implements OnInit {
   showAddNestedSplitModal = false;
   showEditRecipientModal = false;
   showExportModal = false;
+  showNewTreeModal = false;
   
   viewMode: 'diagram' | 'tree' = 'diagram'; // Toggle between visual diagram and tree view
 
@@ -43,6 +45,9 @@ export class SplitBuilderPage implements OnInit {
     percentage: 0,
   };
 
+  // Form data for new tree
+  newTreeName = 'Main Split';
+
   // Edit recipient data
   editingRecipient: Recipient | null = null;
   showFinalizeModal = false;
@@ -50,6 +55,7 @@ export class SplitBuilderPage implements OnInit {
 
   constructor(
     private splitTreeService: SplitTreeService,
+    private splitXCHApi: SplitXCHApiService,
     private alertController: AlertController,
     private loadingController: LoadingController
   ) {}
@@ -65,13 +71,25 @@ export class SplitBuilderPage implements OnInit {
 
     // Initialize with a new tree if none exists
     if (!this.tree) {
-      this.createNewTree();
+      this.tree = this.splitTreeService.createNewTree('Main Split');
+      this.selectedNode = this.tree.root;
     }
   }
 
+  openNewTreeModal() {
+    this.newTreeName = 'Main Split';
+    this.showNewTreeModal = true;
+  }
+
   createNewTree() {
-    this.tree = this.splitTreeService.createNewTree('Main Split');
+    if (!this.newTreeName || this.newTreeName.trim() === '') {
+      this.showAlert('Error', 'Please enter a name for the split tree.');
+      return;
+    }
+    
+    this.tree = this.splitTreeService.createNewTree(this.newTreeName.trim());
     this.selectedNode = this.tree.root;
+    this.showNewTreeModal = false;
   }
 
   selectNode(node: SplitNode) {
@@ -349,29 +367,33 @@ export class SplitBuilderPage implements OnInit {
     await loading.present();
 
     try {
-      // Call finalization - this is where you'd integrate with SplitXCH API
+      // Call finalization using the SplitXCH API
       const result = await this.splitTreeService.finalizeBlueprint(
         this.tree,
         async (recipients) => {
-          // TODO: Replace this with actual SplitXCH API call
-          // For now, simulate API call
-          console.log('Creating split with recipients:', recipients);
+          console.log('Creating split via SplitXCH API with recipients:', recipients);
           
-          // Simulate API delay
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          
-          // Generate a mock split address (in real implementation, call SplitXCH API)
-          return `xch1split_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          try {
+            // Call the actual SplitXCH API
+            const splitAddress = await this.splitXCHApi.createSplitAsync(recipients);
+            console.log('Split created successfully:', splitAddress);
+            return splitAddress;
+          } catch (error) {
+            console.error('Failed to create split via SplitXCH API:', error);
+            throw new Error(`Failed to create split: ${(error as Error).message}`);
+          }
         }
       );
 
       await loading.dismiss();
 
       this.finalizationResult = result;
-      this.showFinalizeModal = true;
-
-      if (result.success) {
-        this.showAlert('Success', 'Blueprint finalized successfully! All SplitXCH addresses have been created.');
+      
+      if (result.success && result.finalizedTree) {
+        // Update the tree with finalized addresses
+        this.tree = result.finalizedTree;
+        this.selectedNode = this.tree.root;
+        this.showFinalizeModal = true;
       } else {
         this.showAlert(
           'Finalization Errors',
@@ -514,6 +536,63 @@ export class SplitBuilderPage implements OnInit {
    */
   isSplitXCHNode(node: SplitNode): boolean {
     return node.isSplitXCH === true;
+  }
+
+  copyAddressToClipboard(address: string) {
+    navigator.clipboard.writeText(address).then(() => {
+      this.showAlert('Success', 'Address copied to clipboard!');
+    }).catch(() => {
+      this.showAlert('Error', 'Failed to copy address');
+    });
+  }
+
+  getFinalizationAddresses(): Array<{ name: string; address: string }> {
+    if (!this.finalizationResult || !this.tree) return [];
+    
+    const addresses: Array<{ name: string; address: string }> = [];
+    
+    // Add root address
+    if (this.tree.root.splitAddress) {
+      addresses.push({
+        name: this.tree.root.name,
+        address: this.tree.root.splitAddress
+      });
+    }
+    
+    // Collect all split node addresses
+    const collectAddresses = (node: SplitNode): void => {
+      if (node.children) {
+        node.children.forEach(child => {
+          if (child.isSplitXCH && child.splitAddress) {
+            addresses.push({
+              name: child.name,
+              address: child.splitAddress
+            });
+            collectAddresses(child);
+          }
+        });
+      }
+    };
+    
+    collectAddresses(this.tree.root);
+    return addresses;
+  }
+
+  downloadFinalizedTree() {
+    if (!this.tree) return;
+    
+    const json = this.splitTreeService.exportToJSON(this.tree);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `split-tree-finalized-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    this.showAlert('Success', 'Finalized tree downloaded!');
   }
 }
 

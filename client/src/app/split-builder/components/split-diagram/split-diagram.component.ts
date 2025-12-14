@@ -35,6 +35,11 @@ export class SplitDiagramComponent implements OnInit, OnChanges, AfterViewInit, 
   @Output() removeRecipient = new EventEmitter<{ node: SplitNode; recipientId: string }>();
   @Output() removeNestedSplit = new EventEmitter<{ parentNode: SplitNode; childNodeId: string }>();
   @Output() editRecipient = new EventEmitter<{ node: SplitNode; recipient: Recipient }>();
+  @Output() createNewTree = new EventEmitter<void>();
+  @Output() exportToJSON = new EventEmitter<void>();
+  @Output() exportToSplitXCH = new EventEmitter<void>();
+  @Output() finalizeBlueprint = new EventEmitter<void>();
+  @Input() showFinalizeButton: boolean = false;
 
   @ViewChild('diagramDiv', { static: false }) diagramDiv?: ElementRef<HTMLDivElement>;
   @ViewChild('deleteBox', { static: false }) deleteBox?: ElementRef<HTMLDivElement>;
@@ -318,6 +323,29 @@ export class SplitDiagramComponent implements OnInit, OnChanges, AfterViewInit, 
           new go.Binding('text', 'recipientCount', (count) =>
             count > 0 ? `${count} recipient${count > 1 ? 's' : ''}` : 'Empty split'
           )
+        ),
+        // Show split address if finalized
+        $(
+          go.TextBlock,
+          {
+            font: '9px monospace',
+            textAlign: 'center',
+            alignment: go.Spot.Center,
+            margin: new go.Margin(4, 0, 0, 0),
+            stroke: '#667eea',
+            maxLines: 1,
+            editable: false,
+            visible: false, // Hidden by default, shown via binding
+          },
+          new go.Binding('text', 'splitAddress', (addr) => {
+            if (!addr) return '';
+            // Show shortened address: first 8 chars + ... + last 6 chars
+            if (addr.length > 20) {
+              return addr.substring(0, 8) + '...' + addr.substring(addr.length - 6);
+            }
+            return addr;
+          }),
+          new go.Binding('visible', 'splitAddress', (addr) => !!addr && addr.startsWith('xch1'))
         )
       ),
       // Add "+" button for adding children (only on SplitXCH nodes, not wallets/recipients)

@@ -15,15 +15,47 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
+  padding-top: 20px; // Extra top padding for FAB clearance
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   min-height: 56px; // Ensure enough space for FAB
+  overflow: visible; // Allow FAB to overflow above
 }
 
 .diagram-toolbar {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+// Style for icon buttons from header actions
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #1d1d1f;
+  padding: 0;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  ion-icon {
+    font-size: 20px;
+  }
 }
 
 .diagram-content-wrapper {
@@ -55,7 +87,7 @@
 
 .diagram-fab {
   position: absolute;
-  top: 8px; // Position within header bar
+  top: -8px; // Position above header bar to avoid cutoff
   right: 16px;
   z-index: 1000;
   pointer-events: auto;
@@ -85,6 +117,36 @@
 
   .sidebar-basis-points {
     font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .sidebar-fee-info {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .sidebar-fee-line,
+  .sidebar-net-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .sidebar-fee-label,
+  .sidebar-net-label {
+    color: #86868b;
+    font-weight: 500;
+  }
+
+  .sidebar-fee-value {
+    color: #ff9500;
+    font-weight: 600;
+  }
+
+  .sidebar-net-value {
     color: #667eea;
     font-weight: 600;
   }
@@ -209,49 +271,22 @@
   }
 }
 
-.diagram-legend {
+.diagram-hint {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  gap: 6px;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(0, 0, 0, 0.05);
-  font-size: 12px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #86868b;
-  font-weight: 500;
-}
-
-.legend-box {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 2px solid #667eea;
-}
-
-.split-box {
-  background: #ffffff;
-}
-
-.recipient-box {
-  background: #f0f4ff;
-  border-color: #667eea;
-}
-
-.legend-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #86868b;
-  margin-left: auto;
   font-size: 11px;
+  color: #86868b;
   font-weight: 500;
+
+  ion-icon {
+    font-size: 14px;
+  }
 }
 
 .delete-box {

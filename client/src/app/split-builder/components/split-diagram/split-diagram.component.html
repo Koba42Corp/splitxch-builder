@@ -2,27 +2,26 @@
   <!-- Toolbar and FAB above diagram -->
   <div class="diagram-header-bar">
     <div class="diagram-toolbar">
-      <ion-button size="small" (click)="zoomToFit()">
-        <ion-icon name="expand" slot="start"></ion-icon>
-        Fit
-      </ion-button>
-      <ion-button size="small" (click)="resetZoom()">
-        <ion-icon name="resize" slot="start"></ion-icon>
-        Reset
-      </ion-button>
+      <button class="icon-button" (click)="zoomToFit()" title="Fit">
+        <ion-icon name="expand"></ion-icon>
+      </button>
+      <button class="icon-button" (click)="resetZoom()" title="Reset">
+        <ion-icon name="resize"></ion-icon>
+      </button>
+      <!-- Header action buttons moved here -->
+      <button class="icon-button" (click)="createNewTree.emit()" title="New Split">
+        <ion-icon name="add-outline"></ion-icon>
+      </button>
+      <button class="icon-button" (click)="exportToJSON.emit()" title="Export">
+        <ion-icon name="download-outline"></ion-icon>
+      </button>
+      <button class="icon-button" (click)="exportToSplitXCH.emit()" title="Export SplitXCH">
+        <ion-icon name="code-outline"></ion-icon>
+      </button>
+      <button class="icon-button" (click)="finalizeBlueprint.emit()" title="Finalize Blueprint" *ngIf="showFinalizeButton">
+        <ion-icon name="checkmark-done-outline"></ion-icon>
+      </button>
     </div>
-    <!-- FAB button for adding recipients - only shown when SplitXCH node is selected -->
-    <ion-fab 
-      *ngIf="selectedNode && isSplitXCHNode(selectedNode)" 
-      vertical="top" 
-      horizontal="end" 
-      slot="fixed"
-      class="diagram-fab"
-    >
-      <ion-fab-button (click)="addRecipient.emit(selectedNode)">
-        <ion-icon name="add"></ion-icon>
-      </ion-fab-button>
-    </ion-fab>
   </div>
   <div class="diagram-content-wrapper">
     <div #diagramDiv class="diagram-wrapper"></div>
@@ -32,6 +31,17 @@
       <div class="sidebar-header">
         <h3 class="sidebar-title">{{ selectedNode.name }}</h3>
         <div class="sidebar-basis-points">{{ formatBasisPoints(selectedNode.basisPoints) }}</div>
+        <!-- SplitXCH Fee Display -->
+        <div class="sidebar-fee-info" *ngIf="selectedNode.isSplitXCH && selectedNode.feeBasisPoints">
+          <div class="sidebar-fee-line">
+            <span class="sidebar-fee-label">SplitXCH Fee:</span>
+            <span class="sidebar-fee-value">{{ formatBasisPoints(selectedNode.feeBasisPoints || 0) }}</span>
+          </div>
+          <div class="sidebar-net-line" *ngIf="selectedNode.netBasisPoints !== undefined">
+            <span class="sidebar-net-label">Net After Fee:</span>
+            <span class="sidebar-net-value">{{ formatBasisPoints(selectedNode.netBasisPoints) }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- Recipients Section -->
@@ -95,19 +105,9 @@
     <ion-icon name="trash-outline"></ion-icon>
     <span>Drop Here To Delete</span>
   </div>
-  <div class="diagram-legend">
-    <div class="legend-item">
-      <div class="legend-box split-box"></div>
-      <span>Split Node</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-box recipient-box"></div>
-      <span>Recipient</span>
-    </div>
-    <div class="legend-hint">
-      <ion-icon name="information-circle"></ion-icon>
-      <span>Click node name to edit • Right-click for menu • Drag to delete area to remove</span>
-    </div>
+  <div class="diagram-hint">
+    <ion-icon name="information-circle"></ion-icon>
+    <span>Click node name to edit • Right-click for menu • Drag to delete area to remove</span>
   </div>
 </div>
 

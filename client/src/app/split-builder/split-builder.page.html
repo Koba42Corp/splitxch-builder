@@ -3,21 +3,7 @@
   <!-- Header Section -->
   <div class="header-section">
     <div class="header-content">
-      <h1 class="page-title">Royalty Split Builder</h1>
-      <div class="header-actions">
-        <button class="icon-button" (click)="createNewTree()" title="New Split">
-          <ion-icon name="add-outline"></ion-icon>
-        </button>
-        <button class="icon-button" (click)="exportToJSON()" title="Export">
-          <ion-icon name="download-outline"></ion-icon>
-        </button>
-        <button class="icon-button" (click)="exportToSplitXCH()" title="Export SplitXCH">
-          <ion-icon name="code-outline"></ion-icon>
-        </button>
-        <button class="icon-button" (click)="finalizeBlueprint()" title="Finalize Blueprint" *ngIf="!isFinalized() && hasPlaceholders()">
-          <ion-icon name="checkmark-done-outline"></ion-icon>
-        </button>
-      </div>
+      <h1 class="page-title">IFSTT</h1>
     </div>
   </div>
 
@@ -41,13 +27,11 @@
 
     <!-- Diagram Section -->
     <div class="diagram-section" *ngIf="tree">
-      <div class="diagram-header">
-        <h2 class="section-title">Split Structure</h2>
-      </div>
       <div class="diagram-container">
         <app-split-diagram
           [tree]="tree"
           [selectedNode]="selectedNode"
+          [showFinalizeButton]="!isFinalized() && hasPlaceholders()"
           (nodeSelected)="selectNode($event)"
           (nodeDoubleClicked)="selectNode($event)"
           (addRecipient)="openAddRecipientModal($event)"
@@ -57,6 +41,10 @@
           (removeRecipient)="removeRecipient($event.node, $event.recipientId)"
           (removeNestedSplit)="removeNestedSplit($event)"
           (editRecipient)="editRecipient($event.node, $event.recipient)"
+          (createNewTree)="openNewTreeModal()"
+          (exportToJSON)="exportToJSON()"
+          (exportToSplitXCH)="exportToSplitXCH()"
+          (finalizeBlueprint)="finalizeBlueprint()"
         ></app-split-diagram>
       </div>
     </div>
@@ -65,7 +53,7 @@
     <div class="empty-state" *ngIf="!tree">
       <ion-icon name="git-network-outline" class="empty-state-icon"></ion-icon>
       <p class="empty-state-text">No split tree created yet</p>
-      <button class="primary-button" (click)="createNewTree()" style="margin-top: 24px; max-width: 200px; margin-left: auto; margin-right: auto;">
+      <button class="primary-button" (click)="openNewTreeModal()" style="margin-top: 24px; max-width: 200px; margin-left: auto; margin-right: auto;">
         <ion-icon name="add-outline"></ion-icon>
         Create Split Tree
       </button>
@@ -142,6 +130,28 @@
   </ng-template>
 </ion-modal>
 
+<!-- New Tree Modal -->
+<ion-modal [isOpen]="showNewTreeModal" (willDismiss)="showNewTreeModal = false" [showBackdrop]="true" [backdropDismiss]="true">
+  <ng-template>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Create New Split Tree</h2>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Tree Name</label>
+        <input type="text" class="form-input" [(ngModel)]="newTreeName" placeholder="Enter tree name">
+        <div class="form-note">This will replace the current split tree with a new one</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-button secondary" (click)="showNewTreeModal = false">Cancel</button>
+        <button class="modal-button primary" (click)="createNewTree()">Create Tree</button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
 <!-- Add Nested Split Modal -->
 <ion-modal [isOpen]="showAddNestedSplitModal" (willDismiss)="showAddNestedSplitModal = false" [showBackdrop]="true" [backdropDismiss]="true">
   <ng-template>
@@ -195,6 +205,56 @@
       <div class="modal-actions">
         <button class="modal-button secondary" (click)="showEditRecipientModal = false">Cancel</button>
         <button class="modal-button primary" (click)="saveRecipientEdit()">Save Changes</button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+<!-- Finalization Success Modal -->
+<ion-modal [isOpen]="showFinalizeModal" (willDismiss)="showFinalizeModal = false" [showBackdrop]="true" [backdropDismiss]="true">
+  <ng-template>
+    <div class="modal-content" *ngIf="finalizationResult && finalizationResult.success && tree">
+      <div class="modal-header">
+        <div class="success-icon">
+          <ion-icon name="checkmark-circle" style="font-size: 48px; color: #34c759;"></ion-icon>
+        </div>
+        <h2 class="modal-title">Blueprint Finalized Successfully!</h2>
+        <p class="modal-subtitle">All SplitXCH addresses have been created</p>
+      </div>
+      
+      <!-- Root Address -->
+      <div class="form-group" style="background: #f0f4ff; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+        <label class="form-label" style="font-weight: 600; color: #667eea; margin-bottom: 8px;">Root Split Address</label>
+        <div class="address-display">
+          <code style="font-size: 14px; word-break: break-all; color: #1d1d1f;">{{ tree.root.splitAddress }}</code>
+          <button class="copy-button" (click)="copyAddressToClipboard(tree.root.splitAddress || '')" title="Copy">
+            <ion-icon name="copy-outline"></ion-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Created Addresses List -->
+      <div class="form-group">
+        <label class="form-label">Created Split Addresses</label>
+        <div class="addresses-list">
+          <div class="address-item" *ngFor="let entry of getFinalizationAddresses()">
+            <div class="address-item-info">
+              <div class="address-item-name">{{ entry.name }}</div>
+              <code class="address-item-address">{{ entry.address }}</code>
+            </div>
+            <button class="copy-button" (click)="copyAddressToClipboard(entry.address)" title="Copy">
+              <ion-icon name="copy-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-button secondary" (click)="showFinalizeModal = false">Close</button>
+        <button class="modal-button primary" (click)="downloadFinalizedTree()">
+          <ion-icon name="download-outline" style="margin-right: 8px;"></ion-icon>
+          Download Finalized Tree
+        </button>
       </div>
     </div>
   </ng-template>

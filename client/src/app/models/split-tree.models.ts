@@ -55,6 +55,9 @@ export class BasisPointsUtils {
 
   /** Maximum basis points (100%) */
   static readonly MAX_BASIS_POINTS = 10000;
+
+  /** SplitXCH fee in basis points (25 bps = 0.25% per split) */
+  static readonly SPLITXCH_FEE_BASIS_POINTS = 25;
 }
 
 /**
@@ -78,6 +81,10 @@ export interface SplitNode {
   splitAddress?: string;
   /** Whether this node represents a SplitXCH split (vs just a container) */
   isSplitXCH?: boolean;
+  /** SplitXCH fee in basis points (25 bps = 0.25% fee per split) */
+  feeBasisPoints?: number;
+  /** Net basis points after fee deduction (basisPoints - feeBasisPoints) */
+  netBasisPoints?: number;
 }
 
 /**

@@ -326,6 +326,18 @@ ion-modal {
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   margin-bottom: 24px;
   background: #ffffff; // Ensure white background
+  text-align: center;
+
+  .success-icon {
+    margin-bottom: 16px;
+  }
+
+  .modal-subtitle {
+    color: #86868b;
+    font-size: 14px;
+    margin-top: 8px;
+    margin-bottom: 0;
+  }
 }
 
 .modal-title {
@@ -338,6 +350,82 @@ ion-modal {
 .form-group {
   margin-bottom: 24px;
   padding: 0 24px;
+}
+
+.address-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  code {
+    flex: 1;
+  }
+}
+
+.copy-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #86868b;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #1d1d1f;
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  ion-icon {
+    font-size: 18px;
+  }
+}
+
+.addresses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.address-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fafbfc;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.address-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.address-item-name {
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.address-item-address {
+  font-size: 12px;
+  color: #86868b;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  word-break: break-all;
 }
 
 .form-label {

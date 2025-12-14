@@ -1,3 +1,4 @@
 export const environment = {
-  production: true
+  production: true,
+  splitXCHApiUrl: 'https://splitxch.com/api',
 };

@@ -38,6 +38,41 @@ export class SplitTreeService {
    * Root is always a SplitXCH address (placeholder initially)
    * Starts with two default wallet recipients (50% each)
    */
+  /**
+   * Calculate fee and net basis points for a SplitXCH node
+   * Note: The fee is stored as a constant (25 bps = 0.25%), but the actual fee amount
+   * is calculated proportionally based on the amount flowing through the node
+   * (which is done in calculateFinalBasisPoints)
+   */
+  calculateNodeFees(node: SplitNode): { feeBasisPoints: number; netBasisPoints: number } {
+    if (!node.isSplitXCH) {
+      return { feeBasisPoints: 0, netBasisPoints: node.basisPoints };
+    }
+    
+    // SplitXCH charges 25 bps (0.25%) fee per split
+    // This is the fee rate, not the absolute fee amount
+    const feeBasisPoints = BasisPointsUtils.SPLITXCH_FEE_BASIS_POINTS;
+    // Calculate net as percentage of gross (99.75% after 0.25% fee)
+    // This is used for display purposes; actual fee calculation happens in calculateFinalBasisPoints
+    const netBasisPoints = Math.round((node.basisPoints * (BasisPointsUtils.MAX_BASIS_POINTS - feeBasisPoints)) / BasisPointsUtils.MAX_BASIS_POINTS);
+    
+    return { feeBasisPoints, netBasisPoints };
+  }
+
+  /**
+   * Update fees for a node and all its children recursively
+   */
+  updateNodeFees(node: SplitNode): void {
+    const { feeBasisPoints, netBasisPoints } = this.calculateNodeFees(node);
+    node.feeBasisPoints = feeBasisPoints;
+    node.netBasisPoints = netBasisPoints;
+    
+    // Recursively update children
+    if (node.children) {
+      node.children.forEach(child => this.updateNodeFees(child));
+    }
+  }
+
   createNewTree(name?: string): SplitTree {
     const root: SplitNode = {
       id: this.generateId(),
@@ -65,6 +100,11 @@ export class SplitTreeService {
       splitAddress: this.generatePlaceholderAddress(),
       isSplitXCH: true,
     };
+
+    // Calculate fees for the root node
+    const { feeBasisPoints, netBasisPoints } = this.calculateNodeFees(root);
+    root.feeBasisPoints = feeBasisPoints;
+    root.netBasisPoints = netBasisPoints;
 
     const tree: SplitTree = {
       root,
@@ -194,6 +234,11 @@ export class SplitTreeService {
       splitAddress: this.generatePlaceholderAddress(),
       isSplitXCH: true,
     };
+    
+    // Calculate fees for the new split node
+    const { feeBasisPoints, netBasisPoints } = this.calculateNodeFees(newSplit);
+    newSplit.feeBasisPoints = feeBasisPoints;
+    newSplit.netBasisPoints = netBasisPoints;
 
     parentNode.children.push(newSplit);
     this.setCurrentTree(tree);
@@ -336,6 +381,8 @@ export class SplitTreeService {
     }
 
     Object.assign(node, updates);
+    // Recalculate fees when node is updated
+    this.updateNodeFees(node);
     this.setCurrentTree(tree);
     return tree;
   }
@@ -443,28 +490,54 @@ export class SplitTreeService {
   /**
    * Calculate final basis points for each recipient
    * This accounts for nested splits by multiplying basis points down the tree
+   * Fees are deducted at each SplitXCH node level
    */
   calculateFinalBasisPoints(tree: SplitTree): Map<string, number> {
     const finalBasisPoints = new Map<string, number>();
 
-    const traverseNode = (node: SplitNode, parentBasisPoints: number = BasisPointsUtils.MAX_BASIS_POINTS): void => {
-      // Calculate this node's share of parent's basis points
-      const nodeBasisPoints = Math.round((parentBasisPoints * node.basisPoints) / BasisPointsUtils.MAX_BASIS_POINTS);
+    // Ensure all node fees are up to date
+    this.updateNodeFees(tree.root);
 
-      // Process direct recipients
-      if (node.recipients) {
+    const traverseNode = (node: SplitNode, parentNetBasisPoints: number = BasisPointsUtils.MAX_BASIS_POINTS): void => {
+      // Calculate this node's share of parent's net basis points (after parent's fees)
+      const nodeGrossBasisPoints = Math.round((parentNetBasisPoints * node.basisPoints) / BasisPointsUtils.MAX_BASIS_POINTS);
+      
+      // Apply this node's fee if it's a SplitXCH node (fee is deducted from gross)
+      let nodeNetBasisPoints = nodeGrossBasisPoints;
+      if (node.isSplitXCH && node.feeBasisPoints) {
+        const feeAmount = Math.round((nodeGrossBasisPoints * node.feeBasisPoints) / BasisPointsUtils.MAX_BASIS_POINTS);
+        nodeNetBasisPoints = Math.max(0, nodeGrossBasisPoints - feeAmount);
+      }
+
+      // Process direct recipients (distribute net basis points after this node's fees)
+      if (node.recipients && node.recipients.length > 0) {
+        // Calculate total recipient basis points for this node
+        const totalRecipientBasisPoints = node.recipients.reduce((sum, r) => sum + r.basisPoints, 0);
+        
         node.recipients.forEach((recipient) => {
-          // Calculate recipient's share of this node's basis points
-          const recipientBasisPoints = Math.round((nodeBasisPoints * recipient.basisPoints) / BasisPointsUtils.MAX_BASIS_POINTS);
+          // Calculate recipient's share of this node's net basis points (after fee)
+          // Use the node's basisPoints (gross) for proportional distribution
+          const recipientBasisPoints = totalRecipientBasisPoints > 0
+            ? Math.round((nodeNetBasisPoints * recipient.basisPoints) / totalRecipientBasisPoints)
+            : 0;
+          
           const current = finalBasisPoints.get(recipient.address.toLowerCase()) || 0;
           finalBasisPoints.set(recipient.address.toLowerCase(), current + recipientBasisPoints);
         });
       }
 
-      // Process nested splits
-      if (node.children) {
+      // Process nested splits (pass net basis points after this node's fees)
+      if (node.children && node.children.length > 0) {
+        // Calculate total child basis points for proportional distribution
+        const totalChildBasisPoints = node.children.reduce((sum, c) => sum + c.basisPoints, 0);
+        
         node.children.forEach((child) => {
-          traverseNode(child, nodeBasisPoints);
+          // Calculate child's share of net basis points
+          const childShareOfNet = totalChildBasisPoints > 0
+            ? Math.round((nodeNetBasisPoints * child.basisPoints) / totalChildBasisPoints)
+            : 0;
+          
+          traverseNode(child, childShareOfNet);
         });
       }
     };
@@ -570,7 +643,7 @@ export class SplitTreeService {
    */
   async finalizeBlueprint(
     tree: SplitTree,
-    createSplitCallback: (recipients: Array<{ address: string; basisPoints: number }>) => Promise<string>
+    createSplitCallback: (recipients: Array<{ address: string; basisPoints: number; name?: string }>) => Promise<string>
   ): Promise<FinalizationResult> {
     const result: FinalizationResult = {
       success: true,
@@ -598,7 +671,7 @@ export class SplitTreeService {
         }
 
         // Collect recipients for this split
-        const recipients: Array<{ address: string; basisPoints: number }> = [];
+        const recipients: Array<{ address: string; basisPoints: number; name?: string }> = [];
 
         // Add direct recipients (fixed wallets or already-created splits)
         if (node.recipients) {
@@ -621,6 +694,7 @@ export class SplitTreeService {
             recipients.push({
               address,
               basisPoints: recipient.basisPoints,
+              name: recipient.name,
             });
           }
         }
@@ -641,6 +715,7 @@ export class SplitTreeService {
               recipients.push({
                 address: childAddress,
                 basisPoints: child.basisPoints,
+                name: child.name,
               });
             }
           }
@@ -653,12 +728,29 @@ export class SplitTreeService {
           continue;
         }
 
-        // Validate basis points sum to 10000
+        // Validate basis points
+        // Note: The SplitXCH API expects recipient points + 150 bps fee = 10,000
+        // Our recipients sum to 10,000, but the API service will scale them down
+        // to account for the 150 bps fee automatically
         const totalBasisPoints = recipients.reduce((sum, r) => sum + r.basisPoints, 0);
         if (Math.abs(totalBasisPoints - BasisPointsUtils.MAX_BASIS_POINTS) > 1) {
           result.errors.push(
             `Split "${node.name}" basis points sum to ${totalBasisPoints} instead of ${BasisPointsUtils.MAX_BASIS_POINTS}`
           );
+          result.success = false;
+          continue;
+        }
+        
+        // Also validate we have at least one recipient and all have valid points
+        if (recipients.length === 0) {
+          result.errors.push(`Split "${node.name}" has no recipients`);
+          result.success = false;
+          continue;
+        }
+        
+        // Validate all recipient points are positive
+        if (recipients.some(r => r.basisPoints <= 0)) {
+          result.errors.push(`Split "${node.name}" has recipients with invalid (non-positive) basis points`);
           result.success = false;
           continue;
         }
