@@ -51,7 +51,13 @@
 
 ## 📸 Screenshots
 
-*Screenshots coming soon - add your own!*
+<div align="center">
+
+![IFSTT Preview](client/src/assets/preview.png)
+
+*IFSTT - Visual Split Tree Builder Interface*
+
+</div>
 
 ---
 
